@@ -1,0 +1,129 @@
+Membuat fungsi total buku:
+
+DROP FUNCTION IF EXISTS TotalBuku;
+DELIMITER $$
+CREATE FUNCTION TotalBuku(id int) RETURNS int
+    DETERMINISTIC
+BEGIN
+    DECLARE TOTAL int;
+    SELECT count(*) INTO TOTAL FROM buku WHERE id_kategori = id;
+RETURN (TOTAL);
+END
+
+
+Membuat view jumlah buku sesuai kategori:
+
+DROP VIEW IF EXISTS jumlah_buku_per_kategori;
+CREATE VIEW jumlah_buku_per_kategori AS
+SELECT 
+	k.id_kategori AS ID_KATEGORI, 
+	k.kategori AS KATEGORI, 
+	TotalBuku(k.id_kategori) AS TOTAL_BUKU
+FROM kategori k 
+	left join buku b on b.id_kategori=k.id_kategori
+GROUP BY k.id_kategori;
+
+
+Membuat view daftar buku dan kategori:
+
+DROP VIEW IF EXISTS daftar_buku_dan_kategori;
+CREATE VIEW daftar_buku_dan_kategori AS
+SELECT 
+	b.id_buku AS ID_BUKU,
+	b.judul AS JUDUL,
+	k.kategori AS KATEGORI, 
+	b.isbn AS ISBN, 
+	b.penerbit AS PENERBIT,
+	b.penulis AS PENULIS
+FROM buku b 
+	left join kategori k on b.id_kategori=k.id_kategori;
+
+
+Membuat view daftar buku dan kategori + id_kategori:
+
+DROP VIEW IF EXISTS daftar_buku_dan_kategori_all;
+CREATE VIEW daftar_buku_dan_kategori_all AS
+SELECT 
+	k.id_kategori AS ID_KATEGORI,
+	b.id_buku AS ID_BUKU,
+	b.judul AS JUDUL,
+	k.kategori AS KATEGORI, 
+	b.isbn AS ISBN, 
+	b.penerbit AS PENERBIT,
+	b.penulis AS PENULIS
+FROM buku b 
+	left join kategori k on b.id_kategori=k.id_kategori;
+
+
+Membuat Store Prosedur insert kategori:
+
+DROP PROCEDURE IF EXISTS TambahKategori ;
+DELIMITER $$
+CREATE PROCEDURE TambahKategori(IN val_kategori VARCHAR(30)) 
+BEGIN 
+	START TRANSACTION; 
+	insert into kategori (kategori) values (val_kategori); 
+	COMMIT;
+END
+
+
+Membuat Store Prosedur insert kategori:
+
+DROP PROCEDURE IF EXISTS TambahBuku;
+DELIMITER $$
+CREATE PROCEDURE TambahBuku(IN val_id_kategori INT, IN val_judul TEXT, IN val_isbn VARCHAR(30), IN val_penerbit VARCHAR(50), IN val_penulis VARCHAR(50))
+BEGIN
+	START TRANSACTION;
+	insert into buku (id_kategori, judul, isbn, penerbit, penulis) values (val_id_kategori, val_judul, val_isbn, val_penerbit, val_penulis);
+	COMMIT;
+END
+
+============ belum selesai ==========
+
+DROP PROCEDURE IF EXISTS TambahBuku;
+DELIMITER $$
+CREATE PROCEDURE TambahBuku
+BEGIN
+	DECLARE val_id_kategori INT default 0;
+	DECLARE val_kategori VARCHAR default 'prosedur kategori';
+	START TRANSACTION;
+	insert into kategori (kategori) values(val_kategori);
+	select id_kategori into val_id_kategori from kategori where kategori=val_kategori;
+	IF val_id_kategori=0 THEN ROLLBACK;
+	ELSE IF val_id_kategori!=0 THEN (insert into buku (id_kategori, judul, isbn, penerbit, penulis));
+	COMMIT
+END
+
+=============
+- strict mode untuk check roolback
+=============
+
+
+Membuat trigger insert tabel log buku saat terjadi aksi insert, update dan delete:
+
+DROP TRIGGER IF EXISTS LogBukuInsert;
+DELIMITER $$
+CREATE TRIGGER LogBukuInsert
+BEFORE INSERT ON buku
+FOR EACH ROW
+BEGIN
+	insert into log_buku (id_buku, aksi, tgl) values (NEW.id_buku, 'INSERT', now());
+END
+
+DROP TRIGGER IF EXISTS LogBukuUpdate;
+DELIMITER $$
+CREATE TRIGGER LogBukuUpdate
+BEFORE UPDATE ON buku
+FOR EACH ROW
+BEGIN
+	insert into log_buku (id_buku, aksi, tgl) values (NEW.id_buku, 'UPDATE', now());
+END
+
+DROP TRIGGER IF EXISTS LogBukuDelete;
+DELIMITER $$
+CREATE TRIGGER LogBukuDelete
+BEFORE DELETE ON buku
+FOR EACH ROW
+BEGIN
+	insert into log_buku (id_buku, aksi, tgl) values (OLD.id_buku, 'DELETE', now());
+END
