@@ -1,6 +1,6 @@
 <?php
 
-$link = mysqli_connect("localhost", "root", "", "buku_agus_nurwanto");
+$link = mysqli_connect("localhost", "root", "1", "buku_agus_nurwanto");
 if (!$link) {
     die('Not connected : ' . mysqli_error());
 }
